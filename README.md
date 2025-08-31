@@ -1,4 +1,4 @@
-# N1 Healthcare Multi-Agent Demo
+# LotusHealth Multi-Agent Demo
 
 This demo shows a simple **LangChain + LangGraph multi-agent pipeline** for healthcare:
 
@@ -8,7 +8,7 @@ This demo shows a simple **LangChain + LangGraph multi-agent pipeline** for heal
 - **Memory persistence** → Redis (short-term), ChromaDB (long-term)  
 - **API** → FastAPI endpoint `/process_note`  
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture Overview 
 
 The system implements a multi-agent workflow using LangGraph:
 
