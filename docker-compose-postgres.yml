@@ -1,0 +1,212 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: lotushealth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - lotushealth-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lotushealth-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ChromaDB Vector Store
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    networks:
+      - lotushealth-network
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api_gateway/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - CLINIC_SERVICE_URL=http://clinic-service:8002
+      - AI_SERVICE_URL=http://ai-service:8000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=lotushealth
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      clinic-service:
+        condition: service_started
+      ai-service:
+        condition: service_started
+    networks:
+      - lotushealth-network
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth_service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=lotushealth
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_ECHO=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lotushealth-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Clinic Service
+  clinic-service:
+    build:
+      context: .
+      dockerfile: services/clinic_service/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=lotushealth
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_ECHO=false
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - lotushealth-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AI Service (Multi-Agent + LLM Integration)
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai_service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=lotushealth
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_ECHO=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - lotushealth-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      api-gateway:
+        condition: service_started
+    networks:
+      - lotushealth-network
+
+  # Database Migration Service
+  db-migrate:
+    build:
+      context: .
+      dockerfile: database/Dockerfile
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=lotushealth
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lotushealth-network
+    command: ["python", "migrate.py"]
+    restart: "no"
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  chromadb_data:
+    driver: local
+
+networks:
+  lotushealth-network:
+    driver: bridge

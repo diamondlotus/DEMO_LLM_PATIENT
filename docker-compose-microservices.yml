@@ -1,0 +1,93 @@
+version: "3.9"
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api_gateway/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - CLINIC_SERVICE_URL=http://clinic-service:8002
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      - auth-service
+      - clinic-service
+      - ai-service
+    networks:
+      - lotushealth-network
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth_service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+    networks:
+      - lotushealth-network
+
+  # Clinic Service
+  clinic-service:
+    build:
+      context: .
+      dockerfile: services/clinic_service/Dockerfile
+    ports:
+      - "8002:8002"
+    networks:
+      - lotushealth-network
+
+  # AI Service (Original Multi-Agent)
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai_service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+      - chromadb
+    networks:
+      - lotushealth-network
+
+  # Frontend (Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - lotushealth-network
+
+  # Redis
+  redis:
+    image: redis:6.2
+    ports:
+      - "6379:6379"
+    networks:
+      - lotushealth-network
+
+  # ChromaDB
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "8001:8001"
+    networks:
+      - lotushealth-network
+
+networks:
+  lotushealth-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  chromadb-data:

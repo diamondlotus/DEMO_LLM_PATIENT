@@ -6,4 +6,21 @@ uvicorn
 redis
 chromadb
 python-dotenv
+# New dependencies for microservices
+pyjwt
+bcrypt
+httpx
+# Database dependencies
+sqlalchemy
+psycopg2-binary
+alembic
+# Additional LLM dependencies
+openai
+tiktoken
+# Vector store dependencies
+sentence-transformers
+# Utility dependencies
+python-multipart
+pydantic[email]
+requests
 

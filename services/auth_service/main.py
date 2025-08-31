@@ -1,0 +1,32 @@
+"""
+LotusHealth Auth Service - Main Application
+Clean main.py that only contains app configuration and router inclusion
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from .routers import router as auth_router
+
+# Create FastAPI app
+app = FastAPI(title="LotusHealth Auth Service", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(auth_router)
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {"message": "LotusHealth Auth Service", "version": "1.0.0"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
