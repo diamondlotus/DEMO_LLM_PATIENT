@@ -3,7 +3,8 @@ services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "8000:8000"  # API port
+      - "80:80"      # Frontend port
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:

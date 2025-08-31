@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting N1 Healthcare Multi-Agent Demo..."
+echo "🚀 Starting  LotusHealth Multi-Agent Demo..."
 
 if [ -z "$OPENAI_API_KEY" ]; then
   echo "❌ No API Key found. Please insert your key inside script.sh"

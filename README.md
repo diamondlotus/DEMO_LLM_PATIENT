@@ -37,6 +37,7 @@ Patient Note → Parser Agent → Evaluator Agent → Synthesizer Agent → Fina
 - Docker and Docker Compose
 - OpenAI API key
 - Python 3.8+ (for local development)
+- Modern web browser
 
 ### Environment Setup
 
@@ -64,7 +65,23 @@ Patient Note → Parser Agent → Evaluator Agent → Synthesizer Agent → Fina
    - Redis: localhost:6379
    - ChromaDB: localhost:8001
 
+5. **Access the Frontend**
+   - Frontend: http://localhost (port 80)
+   - The frontend is automatically served by nginx in the Docker container
+
 ## 📖 Usage Guide
+
+### Frontend Interface
+
+The project includes a modern web interface for easy testing:
+
+- **Interactive Form**: Input patient notes and session IDs
+- **Example Notes**: Pre-loaded medical scenarios for testing
+- **Real-time Results**: View agent outputs in organized cards
+- **Responsive Design**: Works on desktop and mobile devices
+
+**Frontend Access:**
+The frontend is automatically served by nginx when you run `docker-compose up --build`. Simply open http://localhost in your browser.
 
 ### API Endpoint
 
@@ -151,8 +168,11 @@ lotushealth/
 │   ├── main.py        # FastAPI application entry point
 │   ├── memory.py      # Memory management (Redis/ChromaDB)
 │   └── state.py       # Workflow state definitions
+├── frontend/
+│   └── index.html     # Modern web interface for testing
 ├── docker-compose.yml # Docker services configuration
 ├── Dockerfile         # Application container definition
+├── serve_frontend.py  # Frontend server script
 ├── requirements.txt   # Python dependencies
 └── README.md         # This file
 ```
@@ -178,6 +198,15 @@ Agents can be configured in `app/agents.py`:
 - **Validation rules**: Customize medical coding validation
 
 ## 🧪 Testing
+
+### Automated Testing
+
+Run the test script to verify everything is working:
+
+```bash
+# Test both frontend and API
+python test_frontend.py
+```
 
 ### API Testing
 
@@ -218,6 +247,33 @@ The application logs:
 - Error conditions
 
 ## 🚨 Troubleshooting
+
+### Docker Build Issues
+
+If you encounter connection refused or nginx errors:
+
+1. **Rebuild without cache:**
+   ```bash
+   docker-compose down
+   docker-compose build --no-cache
+   docker-compose up
+   ```
+
+2. **Check container logs:**
+   ```bash
+   docker-compose logs api
+   ```
+
+3. **Use debug mode:**
+   ```bash
+   # Edit Dockerfile to use debug script
+   CMD ["./start_debug.sh"]
+   ```
+
+4. **Verify file permissions:**
+   ```bash
+   docker-compose exec api ls -la /app/
+   ```
 
 ### Common Issues
 
