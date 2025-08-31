@@ -1,0 +1,26 @@
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+*.egg-info/
+.installed.cfg
+*.manifest
+*.spec
+# Environment
+.env
+.venv
+venv/
+env/
+/bin/
+/lib/
+/include/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs and databases
+*.log
+*.db

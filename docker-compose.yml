@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+      - chromadb
+
+  redis:
+    image: redis:6.2
+    ports:
+      - "6379:6379"
+
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "8001:8001"
+
