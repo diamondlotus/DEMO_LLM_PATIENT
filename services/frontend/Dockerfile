@@ -1,7 +1,10 @@
 FROM nginx:alpine
 
-# Copy frontend files
-COPY frontend/ /usr/share/nginx/html/
+# Copy frontend files to path expected by nginx.conf
+COPY frontend/ /app/frontend/
+
+# Provide a default runtime config (can be overridden with mounted config.js)
+RUN echo "window.__LOTUS_CONFIG__ = { API_BASE_URL: 'http://localhost:8003' };" > /app/frontend/config.js
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf

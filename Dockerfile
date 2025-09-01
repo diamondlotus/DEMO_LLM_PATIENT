@@ -14,10 +14,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# Copy application code
-COPY ./app ./app
-
-# Copy frontend files
+# Copy application code (monorepo services and shared)
+COPY ./services ./services
+COPY ./shared ./shared
 COPY ./frontend ./frontend
 
 # Copy nginx configurations

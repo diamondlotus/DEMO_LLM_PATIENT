@@ -308,8 +308,9 @@
         </div>
     </div>
 
+    <script src="/config.js"></script>
     <script>
-        const API_BASE_URL = ''; // Empty string means same origin (nginx will proxy to backend)
+        const API_BASE_URL = (window.__LOTUS_CONFIG__ && window.__LOTUS_CONFIG__.API_BASE_URL ? window.__LOTUS_CONFIG__.API_BASE_URL : 'http://localhost:8003') + '/ai';
         
         const examples = {
             chest_pain: `Patient presents with chest pain and shortness of breath. Pain is described as pressure-like, radiating to left arm. Associated symptoms include diaphoresis and nausea. Duration is approximately 2 hours. Patient has history of hypertension and diabetes.`,
@@ -342,7 +343,7 @@
             document.getElementById('errorSection').style.display = 'none';
 
             try {
-                const response = await fetch(`${API_BASE_URL}/process_note`, {
+                const response = await fetch(`${API_BASE_URL}/process-note/simple`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -360,7 +361,7 @@
                 const result = await response.json();
                 
                 // Display results
-                displayResults(result.report);
+                displayResults(result.patient_report);
                 
             } catch (error) {
                 console.error('Error:', error);
