@@ -1,0 +1,113 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'services/**'
+      - 'frontend/**'
+      - 'requirements.txt'
+      - 'docker-compose-postgres.yml'
+      - '.github/workflows/deploy-cloudrun.yml'
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  ARTIFACT_REPO: ${{ secrets.ARTIFACT_REPO }}
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Services
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up gcloud auth (Workload Identity)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_ID_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker auth for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Define image tags
+        id: vars
+        run: |
+          TS=$(date +%Y%m%d-%H%M%S)
+          echo "TAG=$TS" >> $GITHUB_OUTPUT
+
+      - name: Build and push images
+        run: |
+          REGION=${{ env.GCP_REGION }}
+          PROJECT=${{ env.GCP_PROJECT_ID }}
+          REPO=${{ env.ARTIFACT_REPO }}
+          TAG=${{ steps.vars.outputs.TAG }}
+
+          docker build -t $REGION-docker.pkg.dev/$PROJECT/$REPO/api-gateway:$TAG -f services/api_gateway/Dockerfile .
+          docker push $REGION-docker.pkg.dev/$PROJECT/$REPO/api-gateway:$TAG
+
+          docker build -t $REGION-docker.pkg.dev/$PROJECT/$REPO/auth-service:$TAG -f services/auth_service/Dockerfile .
+          docker push $REGION-docker.pkg.dev/$PROJECT/$REPO/auth-service:$TAG
+
+          docker build -t $REGION-docker.pkg.dev/$PROJECT/$REPO/clinic-service:$TAG -f services/clinic_service/Dockerfile .
+          docker push $REGION-docker.pkg.dev/$PROJECT/$REPO/clinic-service:$TAG
+
+          docker build -t $REGION-docker.pkg.dev/$PROJECT/$REPO/ai-service:$TAG -f services/ai_service/Dockerfile .
+          docker push $REGION-docker.pkg.dev/$PROJECT/$REPO/ai-service:$TAG
+
+          docker build -t $REGION-docker.pkg.dev/$PROJECT/$REPO/frontend:$TAG -f services/frontend/Dockerfile .
+          docker push $REGION-docker.pkg.dev/$PROJECT/$REPO/frontend:$TAG
+
+      - name: Deploy to Cloud Run - API Gateway
+        run: |
+          gcloud run deploy api-gateway \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/api-gateway:${{ steps.vars.outputs.TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars SECRET_KEY=${{ secrets.SECRET_KEY }},AUTH_SERVICE_URL=${{ secrets.AUTH_SERVICE_URL }},CLINIC_SERVICE_URL=${{ secrets.CLINIC_SERVICE_URL }},AI_SERVICE_URL=${{ secrets.AI_SERVICE_URL }}
+
+      - name: Deploy to Cloud Run - Auth Service
+        run: |
+          gcloud run deploy auth-service \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/auth-service:${{ steps.vars.outputs.TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars SECRET_KEY=${{ secrets.SECRET_KEY }}
+
+      - name: Deploy to Cloud Run - Clinic Service
+        run: |
+          gcloud run deploy clinic-service \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/clinic-service:${{ steps.vars.outputs.TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated
+
+      - name: Deploy to Cloud Run - AI Service
+        run: |
+          gcloud run deploy ai-service \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/ai-service:${{ steps.vars.outputs.TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+
+      - name: Deploy to Cloud Run - Frontend
+        run: |
+          gcloud run deploy frontend \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/frontend:${{ steps.vars.outputs.TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated

@@ -308,8 +308,9 @@
         </div>
     </div>
 
+    <script src="/config.js"></script>
     <script>
-        const API_BASE_URL = 'http://localhost:8003/ai';
+        const API_BASE_URL = (window.__LOTUS_CONFIG__ && window.__LOTUS_CONFIG__.API_BASE_URL ? window.__LOTUS_CONFIG__.API_BASE_URL : 'http://localhost:8003') + '/ai';
         
         const examples = {
             chest_pain: `Patient presents with chest pain and shortness of breath. Pain is described as pressure-like, radiating to left arm. Associated symptoms include diaphoresis and nausea. Duration is approximately 2 hours. Patient has history of hypertension and diabetes.`,
