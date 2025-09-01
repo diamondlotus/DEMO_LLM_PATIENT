@@ -17,13 +17,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Service URLs (in production, use environment variables)
-AUTH_SERVICE_URL = "http://localhost:8001"
-CLINIC_SERVICE_URL = "http://localhost:8002"
-AI_SERVICE_URL = "http://localhost:8000"  # Original AI service
+# Service URLs (configurable via environment variables)
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8001")
+CLINIC_SERVICE_URL = os.getenv("CLINIC_SERVICE_URL", "http://clinic-service:8002")
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:8000")  # Original AI service
 
 # JWT configuration
-SECRET_KEY = "your-secret-key-here"  # Should match auth service
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")  # Should match auth service
 ALGORITHM = "HS256"
 
 # HTTP client

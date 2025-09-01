@@ -11,11 +11,12 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy service code
-COPY services/clinic_service/ ./clinic_service/
+# Copy service and shared code
+COPY services/ ./services/
+COPY shared/ ./shared/
 
 # Expose port
 EXPOSE 8002
 
 # Run the service
-CMD ["python", "clinic_service/main.py"]
+CMD ["python", "services/clinic_service/main.py"]

@@ -11,11 +11,12 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy service code
-COPY services/api_gateway/ ./api_gateway/
+# Copy service and shared code
+COPY services/ ./services/
+COPY shared/ ./shared/
 
 # Expose port
 EXPOSE 8003
 
 # Run the service
-CMD ["python", "api_gateway/main.py"]
+CMD ["python", "services/api_gateway/main.py"]

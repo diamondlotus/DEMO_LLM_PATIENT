@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
-# Copy frontend files
-COPY frontend/ /usr/share/nginx/html/
+# Copy frontend files to path expected by nginx.conf
+COPY frontend/ /app/frontend/
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf

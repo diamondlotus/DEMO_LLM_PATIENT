@@ -11,11 +11,12 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy service code
-COPY app/ ./app/
+# Copy service and shared code so package imports resolve
+COPY services/ ./services/
+COPY shared/ ./shared/
 
 # Expose port
 EXPOSE 8000
 
-# Run the service
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the service (package path)
+CMD ["uvicorn", "services.ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]

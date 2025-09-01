@@ -110,6 +110,8 @@ users_db = {
 }
 
 # Helper functions
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -117,11 +119,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, "your-secret-key-here", algorithm="HS256")
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm="HS256")
     return encoded_jwt
 
 def verify_password(plain_password: str, hashed_password: bytes) -> bool:
-    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
+    # hashed_password is stored as bytes
+    return bcrypt.checkpw(plain_password.encode(), hashed_password)
 
 def get_user(username: str) -> Optional[dict]:
     for user in users_db.values():
@@ -144,7 +147,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, "your-secret-key-here", algorithms=["HS256"])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
