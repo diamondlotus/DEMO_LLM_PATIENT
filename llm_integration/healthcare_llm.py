@@ -11,6 +11,18 @@ import json
 import logging
 from datetime import datetime
 import os
+import sys
+
+# Add project root to path to import database models
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+# Database imports
+from database.connection import get_db_session
+from database.models.knowledge_base import KnowledgeBase
+from database.models.llm_interaction import LLMInteraction
+from database.models.patient import Patient
+from database.models.medical_record import MedicalRecord
+from sqlalchemy.orm import Session
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -105,6 +117,217 @@ class HealthcareLLM:
             context_parts.append(f"Gender: {patient_data['gender']}")
         
         return "\n".join(context_parts) if context_parts else "No specific patient context available."
+    
+    def get_patient_from_db(self, patient_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve patient data from the shared clinic database"""
+        try:
+            with get_db_session() as session:
+                patient = session.query(Patient).filter(Patient.id == patient_id).first()
+                if patient:
+                    return {
+                        'id': str(patient.id),
+                        'name': patient.full_name,
+                        'age': patient.age,
+                        'gender': patient.gender,
+                        'medical_history': patient.medical_history,
+                        'allergies': patient.allergies,
+                        'current_medications': patient.current_medications,
+                        'vital_signs': patient.vital_signs
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Failed to retrieve patient data: {e}")
+            return None
+    
+    def store_interaction(self, interaction_data: Dict[str, Any]) -> bool:
+        """Store LLM interaction in the shared database"""
+        try:
+            with get_db_session() as session:
+                interaction = LLMInteraction(
+                    patient_id=interaction_data.get('patient_id'),
+                    doctor_id=interaction_data.get('doctor_id'),
+                    interaction_type=interaction_data.get('interaction_type', 'general'),
+                    user_input=interaction_data.get('user_input', ''),
+                    llm_response=interaction_data.get('llm_response', ''),
+                    context=interaction_data.get('context', {}),
+                    confidence_score=interaction_data.get('confidence_score', 0.0)
+                )
+                session.add(interaction)
+                session.commit()
+                logger.info(f"Stored LLM interaction: {interaction.id}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to store interaction: {e}")
+            return False
+    
+    def update_knowledge_base(self, knowledge_data: Dict[str, Any]) -> bool:
+        """Update knowledge base in the shared database"""
+        try:
+            with get_db_session() as session:
+                knowledge = KnowledgeBase(
+                    category=knowledge_data.get('category', 'general'),
+                    title=knowledge_data.get('title', ''),
+                    content=knowledge_data.get('content', ''),
+                    source=knowledge_data.get('source', 'ai_learning'),
+                    version=knowledge_data.get('version', '1.0'),
+                    keywords=knowledge_data.get('keywords', []),
+                    related_topics=knowledge_data.get('related_topics', [])
+                )
+                session.add(knowledge)
+                session.commit()
+                logger.info(f"Updated knowledge base: {knowledge.id}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to update knowledge base: {e}")
+            return False
+    
+    def learn_from_medical_records(self, patient_id: str = None) -> bool:
+        """Learn from medical records in the shared database"""
+        try:
+            with get_db_session() as session:
+                query = session.query(MedicalRecord)
+                if patient_id:
+                    query = query.filter(MedicalRecord.patient_id == patient_id)
+                
+                records = query.limit(100).all()  # Limit to prevent memory issues
+                
+                for record in records:
+                    # Extract medical insights from the record
+                    medical_text = f"{record.diagnosis} {record.treatment_plan} {record.notes}"
+                    
+                    # Add to vector store for future reference
+                    self.add_medical_knowledge(
+                        documents=[medical_text],
+                        metadata=[{
+                            'source': 'medical_record',
+                            'patient_id': str(record.patient_id),
+                            'record_id': str(record.id),
+                            'date': record.created_at.isoformat() if record.created_at else None
+                        }]
+                    )
+                
+                logger.info(f"Learned from {len(records)} medical records")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Failed to learn from medical records: {e}")
+            return False
+    
+    def process_and_learn(self, user_input: str, patient_id: str = None, doctor_id: str = None) -> Dict[str, Any]:
+        """Process user input and learn from the interaction"""
+        try:
+            # Get patient context if available
+            patient_context = ""
+            if patient_id:
+                patient_data = self.get_patient_from_db(patient_id)
+                if patient_data:
+                    patient_context = self.get_patient_context(patient_data)
+            
+            # Process the input (analyze symptoms or generate response)
+            if "symptom" in user_input.lower() or "pain" in user_input.lower():
+                response = self.analyze_patient_symptoms(user_input, patient_context)
+            else:
+                response = self.generate_general_response(user_input, patient_context)
+            
+            # Store the interaction in database
+            interaction_data = {
+                'patient_id': patient_id,
+                'doctor_id': doctor_id,
+                'interaction_type': 'symptom_analysis' if 'symptom' in user_input.lower() else 'general_query',
+                'user_input': user_input,
+                'llm_response': json.dumps(response),
+                'context': {'patient_context': patient_context},
+                'confidence_score': response.get('confidence', 0.5)
+            }
+            
+            self.store_interaction(interaction_data)
+            
+            # Extract learning insights
+            learning_insights = self.extract_learning_insights(user_input, response)
+            
+            # Update knowledge base with new insights
+            if learning_insights:
+                self.update_knowledge_base(learning_insights)
+            
+            return {
+                'response': response,
+                'patient_context': patient_context,
+                'learning_applied': bool(learning_insights),
+                'interaction_stored': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to process and learn: {e}")
+            return {
+                'error': 'Failed to process request',
+                'details': str(e)
+            }
+    
+    def extract_learning_insights(self, user_input: str, response: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extract learning insights from user input and AI response"""
+        try:
+            # Simple keyword extraction for learning
+            medical_keywords = []
+            if 'diagnosis' in response:
+                medical_keywords.append('diagnosis')
+            if 'treatment' in response:
+                medical_keywords.append('treatment')
+            if 'symptom' in user_input.lower():
+                medical_keywords.append('symptom_analysis')
+            
+            if not medical_keywords:
+                return None
+            
+            return {
+                'category': 'ai_learning',
+                'title': f"Learning from {user_input[:50]}...",
+                'content': f"User query: {user_input}\nAI response: {json.dumps(response, indent=2)}",
+                'source': 'user_interaction',
+                'version': '1.0',
+                'keywords': medical_keywords,
+                'related_topics': ['medical_ai', 'patient_care', 'diagnostic_support']
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to extract learning insights: {e}")
+            return None
+    
+    def generate_general_response(self, user_input: str, patient_context: str = "") -> Dict[str, Any]:
+        """Generate general medical response"""
+        try:
+            system_prompt = """You are an AI medical assistant. Provide helpful, accurate medical information.
+            Always emphasize that this is for educational purposes and not a substitute for professional medical advice."""
+            
+            user_prompt = f"""
+            Patient Context:
+            {patient_context}
+            
+            User Query:
+            {user_input}
+            
+            Please provide a helpful response.
+            """
+            
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ]
+            
+            response = self.llm.invoke(messages)
+            
+            return {
+                "response": response.content,
+                "timestamp": datetime.now().isoformat(),
+                "confidence": "medium",
+                "type": "general_response"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate general response: {e}")
+            return {
+                "error": "Failed to generate response",
+                "details": str(e)
+            }
     
     def analyze_patient_symptoms(self, symptoms: str, patient_context: str = "") -> Dict[str, Any]:
         """Analyze patient symptoms and provide diagnostic insights"""

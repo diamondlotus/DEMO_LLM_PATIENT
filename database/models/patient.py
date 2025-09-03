@@ -31,7 +31,8 @@ class Patient(Base):
     treatment_recommendations = Column(JSON, nullable=True)  # AI-generated recommendations
     
     # Relationships
+    user = relationship("User", back_populates="patient_profile")
     appointments = relationship("Appointment", back_populates="patient")
-    office_visits = relationship("OfficeVisit", back_populates="patient")
+    # office_visits = relationship("OfficeVisit", back_populates="patient")  # Commented out - table doesn't exist
     medical_records = relationship("MedicalRecord", back_populates="patient")
     llm_interactions = relationship("LLMInteraction", back_populates="patient")

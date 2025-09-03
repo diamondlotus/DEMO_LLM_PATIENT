@@ -74,7 +74,9 @@ class VisitType(str, Enum):
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    email: str = Field(..., regex=r"^[^@]+@[^@]+\.[^@]+$")
+    email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$")
+    first_name: str = Field(..., min_length=1, max_length=50)
+    last_name: str = Field(..., min_length=1, max_length=50)
     full_name: str = Field(..., min_length=2, max_length=100)
     role: UserRole
     is_active: bool = True
@@ -83,7 +85,9 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
 
 class UserUpdate(BaseModel):
-    email: Optional[str] = Field(None, regex=r"^[^@]+@[^@]+\.[^@]+$")
+    email: Optional[str] = Field(None, pattern=r"^[^@]+@[^@]+\.[^@]+$")
+    first_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     full_name: Optional[str] = Field(None, min_length=2, max_length=100)
     is_active: Optional[bool] = None
 
@@ -117,9 +121,9 @@ class PatientBase(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
     date_of_birth: datetime
-    gender: str = Field(..., regex=r"^(male|female|other)$")
+    gender: str = Field(..., pattern=r"^(male|female|other)$")
     phone: str = Field(..., min_length=10, max_length=20)
-    email: str = Field(..., regex=r"^[^@]+@[^@]+\.[^@]+$")
+    email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$")
     address: str = Field(..., min_length=10, max_length=200)
     emergency_contact: str = Field(..., min_length=5, max_length=100)
     insurance_info: Optional[Dict[str, Any]] = None
@@ -134,7 +138,7 @@ class PatientUpdate(BaseModel):
     first_name: Optional[str] = Field(None, min_length=1, max_length=50)
     last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     phone: Optional[str] = Field(None, min_length=10, max_length=20)
-    email: Optional[str] = Field(None, regex=r"^[^@]+@[^@]+\.[^@]+$")
+    email: Optional[str] = Field(None, pattern=r"^[^@]+@[^@]+\.[^@]+$")
     address: Optional[str] = Field(None, min_length=10, max_length=200)
     emergency_contact: Optional[str] = Field(None, min_length=5, max_length=100)
     insurance_info: Optional[Dict[str, Any]] = None
@@ -164,7 +168,13 @@ class DoctorBase(BaseModel):
     is_active: bool = True
 
 class DoctorCreate(DoctorBase):
-    user_id: str
+    user_id: Optional[str] = None  # Optional - can create user automatically
+    # User creation fields (when user_id is not provided)
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
 
 class DoctorUpdate(BaseModel):
     specialization: Optional[str] = Field(None, min_length=2, max_length=100)
@@ -176,6 +186,10 @@ class DoctorUpdate(BaseModel):
 class Doctor(DoctorBase):
     id: str
     user_id: str
+    first_name: str
+    last_name: str
+    full_name: str
+    email: str
     created_at: datetime
     updated_at: datetime
     
@@ -198,6 +212,8 @@ class AppointmentCreate(AppointmentBase):
     pass
 
 class AppointmentUpdate(BaseModel):
+    patient_id: Optional[str] = None
+    doctor_id: Optional[str] = None
     appointment_type: Optional[AppointmentType] = None
     scheduled_date: Optional[datetime] = None
     duration_minutes: Optional[int] = Field(None, ge=15, le=480)
@@ -212,6 +228,17 @@ class Appointment(AppointmentBase):
     
     class Config:
         from_attributes = True
+
+class AppointmentResponse(Appointment):
+    """Enhanced appointment response with patient and doctor details"""
+    patient_name: str
+    patient_email: str
+    doctor_name: str
+    doctor_specialization: str
+    appointment_date: datetime  # Alias for scheduled_date for frontend compatibility
+    ai_notes: Optional[str] = None
+    risk_assessment: Optional[str] = None
+    follow_up_recommendations: Optional[str] = None
 
 # ============================================================================
 # OFFICE VISIT MODELS
@@ -286,8 +313,8 @@ class MedicalRecord(MedicalRecordBase):
 class ScheduleBase(BaseModel):
     doctor_id: str
     date: datetime
-    start_time: str = Field(..., regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
-    end_time: str = Field(..., regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    start_time: str = Field(..., pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    end_time: str = Field(..., pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
     is_available: bool = True
     notes: Optional[str] = None
 
@@ -295,8 +322,8 @@ class ScheduleCreate(ScheduleBase):
     pass
 
 class ScheduleUpdate(BaseModel):
-    start_time: Optional[str] = Field(None, regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
-    end_time: Optional[str] = Field(None, regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    start_time: Optional[str] = Field(None, pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    end_time: Optional[str] = Field(None, pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
     is_available: Optional[bool] = None
     notes: Optional[str] = None
 
@@ -371,7 +398,7 @@ class PatientEducationBase(BaseModel):
     patient_id: str
     topic: str = Field(..., min_length=5, max_length=200)
     content: str = Field(..., min_length=10, max_length=5000)
-    difficulty_level: str = Field(..., regex=r"^(basic|intermediate|advanced)$")
+    difficulty_level: str = Field(..., pattern=r"^(basic|intermediate|advanced)$")
     language: str = Field("en", min_length=2, max_length=10)
     is_read: bool = False
 
@@ -381,7 +408,7 @@ class PatientEducationCreate(PatientEducationBase):
 class PatientEducationUpdate(BaseModel):
     topic: Optional[str] = Field(None, min_length=5, max_length=200)
     content: Optional[str] = Field(None, min_length=10, max_length=5000)
-    difficulty_level: Optional[str] = Field(None, regex=r"^(basic|intermediate|advanced)$")
+    difficulty_level: Optional[str] = Field(None, pattern=r"^(basic|intermediate|advanced)$")
     language: Optional[str] = Field(None, min_length=2, max_length=10)
     is_read: Optional[bool] = None
 

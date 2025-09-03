@@ -10,10 +10,10 @@ class MedicalRecord(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     patient_id = Column(UUID(as_uuid=True), ForeignKey('patients.id'), nullable=False)
-    office_visit_id = Column(UUID(as_uuid=True), ForeignKey('office_visits.id'), nullable=True)
+    # office_visit_id = Column(UUID(as_uuid=True), ForeignKey('office_visits.id'), nullable=True)  # Commented out - table doesn't exist
     record_type = Column(String(50), nullable=False)  # diagnosis, treatment, lab_result, imaging, medication
     content = Column(Text, nullable=False)
-    metadata = Column(JSON, nullable=True)
+    record_metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
     
@@ -24,4 +24,4 @@ class MedicalRecord(Base):
     
     # Relationships
     patient = relationship("Patient", back_populates="medical_records")
-    office_visit = relationship("OfficeVisit", back_populates="medical_records")
+    # office_visit = relationship("OfficeVisit", back_populates="medical_records")  # Commented out - table doesn't exist

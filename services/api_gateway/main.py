@@ -18,9 +18,9 @@ app.add_middleware(
 )
 
 # Service URLs (in production, use environment variables)
-AUTH_SERVICE_URL = "http://localhost:8001"
-CLINIC_SERVICE_URL = "http://localhost:8002"
-AI_SERVICE_URL = "http://localhost:8000"  # Original AI service
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8001")
+CLINIC_SERVICE_URL = os.getenv("CLINIC_SERVICE_URL", "http://clinic-service:8002")
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:8000")  # Original AI service
 
 # JWT configuration
 SECRET_KEY = "your-secret-key-here"  # Should match auth service
@@ -80,7 +80,12 @@ async def forward_request(service_url: str, path: str, method: str, request: Req
         else:
             raise HTTPException(status_code=405, detail="Method not allowed")
         
-        return response
+        # Return the response content and status code
+        return {
+            "content": response.content,
+            "status_code": response.status_code,
+            "headers": dict(response.headers)
+        }
         
     except httpx.RequestError as e:
         raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
@@ -93,21 +98,21 @@ async def health_check():
     
     # Check auth service
     try:
-        auth_response = await http_client.get(f"{AUTH_SERVICE_URL}/health")
+        auth_response = await http_client.get(f"{AUTH_SERVICE_URL}/auth/health")
         services_status["auth_service"] = "healthy" if auth_response.status_code == 200 else "unhealthy"
     except:
         services_status["auth_service"] = "unavailable"
     
     # Check clinic service
     try:
-        clinic_response = await http_client.get(f"{CLINIC_SERVICE_URL}/health")
+        clinic_response = await http_client.get(f"{CLINIC_SERVICE_URL}/clinic/health")
         services_status["clinic_service"] = "healthy" if clinic_response.status_code == 200 else "unhealthy"
     except:
         services_status["clinic_service"] = "unavailable"
     
     # Check AI service
     try:
-        ai_response = await http_client.get(f"{AI_SERVICE_URL}/health")
+        ai_response = await http_client.get(f"{AI_SERVICE_URL}/ai/health")
         services_status["ai_service"] = "healthy" if ai_response.status_code == 200 else "unhealthy"
     except:
         services_status["ai_service"] = "unavailable"
@@ -122,12 +127,50 @@ async def health_check():
 @app.post("/auth/{path:path}")
 async def auth_service_proxy(path: str, request: Request):
     """Proxy requests to auth service"""
-    return await forward_request(AUTH_SERVICE_URL, f"/{path}", request.method, request)
+    result = await forward_request(AUTH_SERVICE_URL, f"/auth/{path}", request.method, request)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 @app.get("/auth/{path:path}")
 async def auth_service_get_proxy(path: str, request: Request):
     """Proxy GET requests to auth service"""
-    return await forward_request(AUTH_SERVICE_URL, f"/{path}", "GET", request)
+    result = await forward_request(AUTH_SERVICE_URL, f"/auth/{path}", "GET", request)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
+
+@app.put("/auth/{path:path}")
+async def auth_service_put_proxy(path: str, request: Request, user: Optional[dict] = Depends(get_current_user)):
+    """Proxy PUT requests to auth service (requires authentication)"""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    result = await forward_request(AUTH_SERVICE_URL, f"/auth/{path}", "PUT", request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
+
+@app.delete("/auth/{path:path}")
+async def auth_service_delete_proxy(path: str, request: Request, user: Optional[dict] = Depends(get_current_user)):
+    """Proxy DELETE requests to auth service (requires authentication)"""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    result = await forward_request(AUTH_SERVICE_URL, f"/auth/{path}", "DELETE", request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 # Clinic service routes
 @app.post("/clinic/{path:path}")
@@ -135,28 +178,52 @@ async def clinic_service_proxy(path: str, request: Request, user: Optional[dict]
     """Proxy requests to clinic service (requires authentication)"""
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return await forward_request(CLINIC_SERVICE_URL, f"/{path}", request.method, request, user)
+    result = await forward_request(CLINIC_SERVICE_URL, f"/clinic/{path}", request.method, request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 @app.get("/clinic/{path:path}")
 async def clinic_service_get_proxy(path: str, request: Request, user: Optional[dict] = Depends(get_current_user)):
     """Proxy GET requests to clinic service (requires authentication)"""
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return await forward_request(CLINIC_SERVICE_URL, f"/{path}", "GET", request, user)
+    result = await forward_request(CLINIC_SERVICE_URL, f"/clinic/{path}", "GET", request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 @app.put("/clinic/{path:path}")
 async def clinic_service_put_proxy(path: str, request: Request, user: Optional[dict] = Depends(get_current_user)):
     """Proxy PUT requests to clinic service (requires authentication)"""
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return await forward_request(CLINIC_SERVICE_URL, f"/{path}", "PUT", request, user)
+    result = await forward_request(CLINIC_SERVICE_URL, f"/clinic/{path}", "PUT", request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 @app.delete("/clinic/{path:path}")
 async def clinic_service_delete_proxy(path: str, request: Request, user: Optional[dict] = Depends(get_current_user)):
     """Proxy DELETE requests to clinic service (requires authentication)"""
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return await forward_request(CLINIC_SERVICE_URL, f"/{path}", "DELETE", request, user)
+    result = await forward_request(CLINIC_SERVICE_URL, f"/clinic/{path}", "DELETE", request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 # AI service routes (original multi-agent service)
 @app.post("/ai/{path:path}")
@@ -164,14 +231,26 @@ async def ai_service_proxy(path: str, request: Request, user: Optional[dict] = D
     """Proxy requests to AI service (requires authentication)"""
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return await forward_request(AI_SERVICE_URL, f"/{path}", request.method, request, user)
+    result = await forward_request(AI_SERVICE_URL, f"/ai/{path}", request.method, request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 @app.get("/ai/{path:path}")
 async def ai_service_get_proxy(path: str, request: Request, user: Optional[dict] = Depends(get_current_user)):
     """Proxy GET requests to AI service (requires authentication)"""
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return await forward_request(AI_SERVICE_URL, f"/{path}", "GET", request, user)
+    result = await forward_request(AI_SERVICE_URL, f"/ai/{path}", "GET", request, user)
+    from fastapi.responses import Response
+    return Response(
+        content=result["content"],
+        status_code=result["status_code"],
+        headers=result["headers"]
+    )
 
 # Root redirect to docs
 @app.get("/")

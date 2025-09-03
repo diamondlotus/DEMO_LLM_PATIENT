@@ -31,9 +31,9 @@ class OfficeVisit(Base):
     drug_interaction_check = Column(JSON, nullable=True)  # AI drug interaction analysis
     clinical_guidelines = Column(JSON, nullable=True)  # Relevant clinical guidelines
     
-    # Relationships
-    appointment = relationship("Appointment", back_populates="office_visit")
-    patient = relationship("Patient", back_populates="office_visits")
-    doctor = relationship("Doctor", back_populates="office_visits")
-    nurse = relationship("User", foreign_keys=[nurse_id], back_populates="nurse_visits")
-    medical_records = relationship("MedicalRecord", back_populates="office_visit")
+    # Relationships - Commented out because table doesn't exist
+    # appointment = relationship("Appointment", back_populates="office_visit")
+    # patient = relationship("Patient", back_populates="office_visits")
+    # doctor = relationship("Doctor", back_populates="office_visits")
+    # nurse = relationship("User", foreign_keys=[nurse_id])
+    # medical_records = relationship("MedicalRecord", back_populates="office_visit")

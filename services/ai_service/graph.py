@@ -7,11 +7,11 @@ import time
 from typing import Dict, Any
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
-from .agents import (
+from agents import (
     parser_agent, evaluator_agent, synthesizer_agent,
     risk_assessment_agent, treatment_planning_agent
 )
-from .state import WorkflowState, AgentResult
+from state import WorkflowState, AgentResult
 import os
 
 # Initialize LLM
@@ -41,17 +41,27 @@ def build_graph():
             result = parse(state.note)
             processing_time = time.time() - start_time
             
+            # Handle LangChain response structure
+            if hasattr(result, 'content'):
+                output = result.content
+            elif hasattr(result, 'text'):
+                output = result.text
+            elif hasattr(result, 'response'):
+                output = result.response
+            else:
+                output = str(result)
+            
             # Create agent result
             agent_result = AgentResult(
                 agent_name="parser",
                 success=True,
-                output=result.content if hasattr(result, 'content') else str(result),
+                output=output,
                 processing_time=processing_time,
                 confidence_score=0.9
             )
             
             return {
-                "data": result.content if hasattr(result, 'content') else str(result),
+                "data": output,
                 "agent_results": [agent_result]
             }
         except Exception as e:
@@ -75,16 +85,26 @@ def build_graph():
             result = evaluate(state.data)
             processing_time = time.time() - start_time
             
+            # Handle LangChain response structure
+            if hasattr(result, 'content'):
+                output = result.content
+            elif hasattr(result, 'text'):
+                output = result.text
+            elif hasattr(result, 'response'):
+                output = result.response
+            else:
+                output = str(result)
+            
             agent_result = AgentResult(
                 agent_name="evaluator",
                 success=True,
-                output=result.content if hasattr(result, 'content') else str(result),
+                output=output,
                 processing_time=processing_time,
                 confidence_score=0.85
             )
             
             return {
-                "validated_data": result.content if hasattr(result, 'content') else str(result),
+                "validated_data": output,
                 "agent_results": state.agent_results + [agent_result]
             }
         except Exception as e:
@@ -108,16 +128,26 @@ def build_graph():
             result = synthesize(state.validated_data)
             processing_time = time.time() - start_time
             
+            # Handle LangChain response structure
+            if hasattr(result, 'content'):
+                output = result.content
+            elif hasattr(result, 'text'):
+                output = result.text
+            elif hasattr(result, 'response'):
+                output = result.response
+            else:
+                output = str(result)
+            
             agent_result = AgentResult(
                 agent_name="synthesizer",
                 success=True,
-                output=result.content if hasattr(result, 'content') else str(result),
+                output=output,
                 processing_time=processing_time,
                 confidence_score=0.9
             )
             
             return {
-                "report": result.content if hasattr(result, 'content') else str(result),
+                "report": output,
                 "agent_results": state.agent_results + [agent_result]
             }
         except Exception as e:

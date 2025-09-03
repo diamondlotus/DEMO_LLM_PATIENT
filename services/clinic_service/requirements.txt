@@ -1,0 +1,26 @@
+# Core FastAPI dependencies
+fastapi
+uvicorn
+python-multipart
+
+# Database dependencies
+sqlalchemy
+psycopg2-binary
+alembic
+
+# OpenAI integration
+openai
+tiktoken
+
+# Vector store for document search
+chromadb
+
+# HTTP client for internal service communication
+httpx
+
+# Pydantic for data validation
+pydantic[email]
+
+# Utility dependencies
+requests
+python-dotenv

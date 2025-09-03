@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init_simple.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - lotushealth-network
     healthcheck:
@@ -41,7 +41,7 @@ services:
   chromadb:
     image: chromadb/chroma:latest
     ports:
-      - "8001:8000"
+      - "8004:8000"
     volumes:
       - chromadb_data:/chroma/chroma
     networks:
@@ -49,11 +49,6 @@ services:
     environment:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_HTTP_PORT=8000
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # API Gateway
   api-gateway:
@@ -66,6 +61,7 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:8001
       - CLINIC_SERVICE_URL=http://clinic-service:8002
       - AI_SERVICE_URL=http://ai-service:8000
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=lotushealth
@@ -104,7 +100,7 @@ services:
     networks:
       - lotushealth-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/auth/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -128,11 +124,11 @@ services:
       postgres:
         condition: service_healthy
       chromadb:
-        condition: service_healthy
+        condition: service_started
     networks:
       - lotushealth-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/clinic/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -158,7 +154,7 @@ services:
       redis:
         condition: service_healthy
       chromadb:
-        condition: service_healthy
+        condition: service_started
     networks:
       - lotushealth-network
     healthcheck:
@@ -170,8 +166,8 @@ services:
   # Frontend (Nginx)
   frontend:
     build:
-      context: .
-      dockerfile: services/frontend/Dockerfile
+      context: services/frontend
+      dockerfile: Dockerfile
     ports:
       - "80:80"
     depends_on:
@@ -179,25 +175,6 @@ services:
         condition: service_started
     networks:
       - lotushealth-network
-
-  # Database Migration Service
-  db-migrate:
-    build:
-      context: .
-      dockerfile: database/Dockerfile
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=lotushealth
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - lotushealth-network
-    command: ["python", "migrate.py"]
-    restart: "no"
 
 volumes:
   postgres_data:

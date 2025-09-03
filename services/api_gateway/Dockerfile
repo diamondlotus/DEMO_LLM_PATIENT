@@ -7,12 +7,13 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
+# Copy service-specific requirements and install Python dependencies
+COPY services/api_gateway/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy service code
+# Copy service code and shared models
 COPY services/api_gateway/ ./api_gateway/
+COPY shared/ ./shared/
 
 # Expose port
 EXPOSE 8003

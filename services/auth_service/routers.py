@@ -12,13 +12,17 @@ import bcrypt
 import sys
 import os
 
-# Add project root to path to import shared models
+# Add project root to path to import shared models and database
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from shared.models import (
     User, UserCreate, UserLogin, Token, PermissionCheck,
     UserRole, Permission
 )
+from database.connection import get_db_session
+from database.models.user import User as DBUser
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -121,7 +125,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 def verify_password(plain_password: str, hashed_password: bytes) -> bool:
-    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
+    return bcrypt.checkpw(plain_password.encode(), hashed_password)
 
 def get_user(username: str) -> Optional[dict]:
     for user in users_db.values():

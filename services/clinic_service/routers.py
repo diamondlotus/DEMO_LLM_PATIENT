@@ -11,7 +11,7 @@ import sys
 import os
 
 # Add project root to path to import shared models
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from shared.models import (
     Patient, PatientCreate, PatientUpdate,

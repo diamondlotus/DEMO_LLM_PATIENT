@@ -1,6 +1,6 @@
-langchain
-langgraph
-langchain-openai
+langchain>=0.1.0
+langgraph>=0.1.0
+langchain-openai>=0.1.0
 fastapi
 uvicorn
 redis
@@ -23,4 +23,7 @@ sentence-transformers
 python-multipart
 pydantic[email]
 requests
+# Document processing dependencies
+PyPDF2
+python-docx
 

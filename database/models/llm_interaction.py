@@ -20,4 +20,4 @@ class LLMInteraction(Base):
     
     # Relationships
     patient = relationship("Patient", back_populates="llm_interactions")
-    doctor = relationship("Doctor", back_populates="llm_interactions")
+    # doctor = relationship("Doctor", back_populates="llm_interactions")  # Commented out - table doesn't exist

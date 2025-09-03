@@ -12,6 +12,8 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    first_name = Column(String(50), nullable=False)
+    last_name = Column(String(50), nullable=False)
     full_name = Column(String(100), nullable=False)
     role = Column(String(20), nullable=False)  # admin, doctor, nurse, receptionist, patient
     is_active = Column(Boolean, default=True)
@@ -19,7 +21,5 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
-    doctor_appointments = relationship("Appointment", foreign_keys="Appointment.doctor_id", back_populates="doctor")
-    nurse_visits = relationship("OfficeVisit", foreign_keys="OfficeVisit.nurse_id", back_populates="nurse")
-    patient_appointments = relationship("Appointment", foreign_keys="Appointment.patient_id", back_populates="patient")
-    patient_visits = relationship("OfficeVisit", foreign_keys="OfficeVisit.patient_id", back_populates="patient")
+    doctor_profile = relationship("Doctor", back_populates="user", uselist=False)
+    patient_profile = relationship("Patient", back_populates="user", uselist=False)

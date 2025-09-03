@@ -5,7 +5,10 @@ Clean main.py that only contains app configuration and router inclusion
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import router as clinic_router
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from routers_postgres import router as clinic_router
 
 # Create FastAPI app
 app = FastAPI(title="LotusHealth Clinic Service", version="1.0.0")

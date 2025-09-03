@@ -27,4 +27,4 @@ class Appointment(Base):
     # Relationships
     patient = relationship("Patient", back_populates="appointments")
     doctor = relationship("Doctor", back_populates="appointments")
-    office_visit = relationship("OfficeVisit", back_populates="appointment", uselist=False)
+    # office_visit = relationship("OfficeVisit", back_populates="appointment", uselist=False)  # Commented out - table doesn't exist

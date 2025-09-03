@@ -1,0 +1,23 @@
+# Core FastAPI dependencies
+fastapi
+uvicorn
+python-multipart
+
+# Authentication dependencies
+pyjwt
+bcrypt
+python-dotenv
+
+# Database dependencies
+sqlalchemy
+psycopg2-binary
+alembic
+
+# HTTP client for internal service communication
+httpx
+
+# Pydantic for data validation
+pydantic[email]
+
+# Utility dependencies
+requests

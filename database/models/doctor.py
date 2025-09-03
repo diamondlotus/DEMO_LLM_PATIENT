@@ -24,7 +24,8 @@ class Doctor(Base):
     ai_assistant_enabled = Column(Boolean, default=True)  # Whether AI assistant is enabled
     
     # Relationships
+    user = relationship("User", back_populates="doctor_profile")
     appointments = relationship("Appointment", back_populates="doctor")
-    office_visits = relationship("OfficeVisit", back_populates="doctor")
+    # office_visits = relationship("OfficeVisit", back_populates="doctor")  # Commented out - table doesn't exist
     schedules = relationship("Schedule", back_populates="doctor")
-    llm_interactions = relationship("LLMInteraction", back_populates="doctor")
+    # llm_interactions = relationship("LLMInteraction", back_populates="doctor")  # Commented out - table doesn't exist

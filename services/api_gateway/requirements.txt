@@ -1,0 +1,14 @@
+# Core FastAPI dependencies
+fastapi
+uvicorn
+python-multipart
+
+# HTTP client for routing requests
+httpx
+
+# Pydantic for data validation
+pydantic[email]
+
+# Utility dependencies
+requests
+python-dotenv
